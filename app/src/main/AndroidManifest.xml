@@ -12,7 +12,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Housekeep"
         tools:targetApi="31">
-
+        <activity
+            android:name=".HomeListActivity"
+            android:exported="false" />
         <activity
             android:name=".LoginActivity"
             android:exported="true">
@@ -23,10 +25,8 @@
             </intent-filter>
         </activity>
 
-        <!-- SignUpActivity -->
         <activity android:name=".SignUpActivity" />
 
-        <!-- MainActivity -->
         <activity android:name=".MainActivity" />
     </application>
 

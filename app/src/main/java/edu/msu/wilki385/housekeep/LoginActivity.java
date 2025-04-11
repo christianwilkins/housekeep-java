@@ -95,7 +95,7 @@ public class LoginActivity extends Activity {
         {
             Toast.makeText(LoginActivity.this, "Signed In!", Toast.LENGTH_SHORT).show();
 
-            Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+            Intent intent = new Intent(LoginActivity.this, HomeListActivity.class);
             startActivity(intent);
             finish();
         }

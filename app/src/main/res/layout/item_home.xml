@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:cardUseCompatPadding="true"
+    android:layout_margin="8dp"
+    android:foreground="?android:attr/selectableItemBackground">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <!-- Home name -->
+        <TextView
+            android:id="@+id/textViewHomeName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Home Name"
+            android:textStyle="bold"
+            android:textSize="16sp"/>
+
+        <!-- Example: a button or icon to "Enter Home" -->
+        <Button
+            android:id="@+id/buttonEnterHome"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Enter"
+            android:layout_alignParentRight="true"/>
+
+        <!-- Example: a button or icon to "Delete Home" -->
+        <Button
+            android:id="@+id/buttonDeleteHome"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Delete"
+            android:layout_toLeftOf="@id/buttonEnterHome"
+            android:layout_marginRight="8dp"/>
+
+    </RelativeLayout>
+
+</com.google.android.material.card.MaterialCardView>
