@@ -13,32 +13,27 @@
         android:layout_height="wrap_content"
         android:padding="16dp">
 
-        <!-- Home name -->
         <TextView
-            android:id="@+id/textViewHomeName"
+            android:id="@+id/textViewHouseName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Home Name"
+            android:text="House Name"
             android:textStyle="bold"
             android:textSize="16sp"/>
 
-        <!-- Example: a button or icon to "Enter Home" -->
         <Button
-            android:id="@+id/buttonEnterHome"
+            android:id="@+id/buttonEnterHouse"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Enter"
             android:layout_alignParentRight="true"/>
 
-        <!-- Example: a button or icon to "Delete Home" -->
         <Button
-            android:id="@+id/buttonDeleteHome"
+            android:id="@+id/buttonDeleteHouse"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Delete"
-            android:layout_toLeftOf="@id/buttonEnterHome"
+            android:layout_toLeftOf="@id/buttonEnterHouse"
             android:layout_marginRight="8dp"/>
-
     </RelativeLayout>
-
 </com.google.android.material.card.MaterialCardView>
