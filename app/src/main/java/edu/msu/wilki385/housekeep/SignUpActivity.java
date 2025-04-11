@@ -19,6 +19,9 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import edu.msu.wilki385.housekeep.collections.User;
 
 public class SignUpActivity extends Activity {
     EditText nameInput, emailInput, passwordInput;
@@ -26,12 +29,17 @@ public class SignUpActivity extends Activity {
     TextView loginLink;
 
     private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
+    private String userName;
+
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         // Initialize Firebase Auth
         mAuth = FirebaseAuth.getInstance();
+
+        db = FirebaseFirestore.getInstance();
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_signup);
@@ -76,6 +84,7 @@ public class SignUpActivity extends Activity {
                             // Sign in success, update UI with the signed-in user's information
                             Log.d(TAG, "createUserWithEmail:success");
                             FirebaseUser user = mAuth.getCurrentUser();
+                            userName = name;
                             updateUI(user);
                         } else {
                             // If sign in fails, display a message to the user.
@@ -91,6 +100,9 @@ public class SignUpActivity extends Activity {
     private void updateUI(FirebaseUser user) {
         if (user != null)
         {
+            User newUser = new User(user.getUid(), userName, user.getEmail());
+            db.collection("users").document(newUser.getId()).set(newUser);
+
             Toast.makeText(SignUpActivity.this, "Account created!", Toast.LENGTH_SHORT).show();
 
             Intent intent = new Intent(SignUpActivity.this, MainActivity.class);
