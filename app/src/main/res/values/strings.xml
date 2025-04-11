@@ -8,6 +8,13 @@
     <string name="signUpLabel">Sign Up</string>
     <string name="name">Name</string>
     <string name="loginRedirect">Already have an account? Login</string>
+    <string name="homeTasksLabel">Home Maintenance Tasks</string>
+    <string name="plus">+</string>
+    <string name="add">Add</string>
+    <string name="add_category">Add Category</string>
+    <string name="add_task">Add Task</string>
+    <string name="task_details">Task Details</string>
+    <string name="task_name">Task Name</string>
     <string name="enter_preference_value">Enter preference value</string>
     <string name="save_preference">Save Preference</string>
     <string name="logout">Logout</string>
