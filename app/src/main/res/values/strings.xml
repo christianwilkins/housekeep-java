@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Housekeep</string>
+    <string name="loginLabel">Login</string>
+    <string name="emailHint">Email</string>
+    <string name="passwordHint">Password</string>
+    <string name="loginButtonLabel">Login</string>
+    <string name="signUpRedirect">Don\'t have an account? Sign up</string>
 </resources>
