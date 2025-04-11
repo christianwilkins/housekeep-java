@@ -8,7 +8,7 @@
         android:id="@+id/editTextInput"
         android:layout_width="300dp"
         android:layout_height="wrap_content"
-        android:hint="Enter text here"
+        android:hint="@string/enter_text_here"
         android:padding="8dp" />
 
 </LinearLayout>
