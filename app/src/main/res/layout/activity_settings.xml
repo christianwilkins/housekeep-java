@@ -24,27 +24,27 @@
             android:layout_width="300dp"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            android:hint="Enter preference value"
+            android:hint="@string/enter_preference_value"
             android:minHeight="48dp" />
 
         <Button
             android:id="@+id/buttonSavePreference"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Save Preference"
+            android:text="@string/save_preference"
             android:layout_marginBottom="16dp"/>
 
         <Button
             android:id="@+id/buttonLogoutSettings"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Logout"
+            android:text="@string/logout"
             android:layout_marginBottom="16dp"/>
 
         <Button
             android:id="@+id/buttonBackSettings"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Back"/>
+            android:text="@string/back"/>
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

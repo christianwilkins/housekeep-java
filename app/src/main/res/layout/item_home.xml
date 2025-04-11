@@ -17,7 +17,7 @@
             android:id="@+id/textViewHouseName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="House Name"
+            android:text="@string/house_name"
             android:textStyle="bold"
             android:textSize="16sp"/>
 
@@ -25,14 +25,14 @@
             android:id="@+id/buttonEnterHouse"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Enter"
+            android:text="@string/enter"
             android:layout_alignParentRight="true"/>
 
         <Button
             android:id="@+id/buttonDeleteHouse"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Delete"
+            android:text="@string/delete"
             android:layout_toLeftOf="@id/buttonEnterHouse"
             android:layout_marginRight="8dp"/>
     </RelativeLayout>
