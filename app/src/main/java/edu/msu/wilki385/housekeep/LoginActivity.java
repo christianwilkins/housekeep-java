@@ -21,11 +21,10 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import edu.msu.wilki385.housekeep.collections.User;
-
 public class LoginActivity extends Activity {
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,6 +72,7 @@ public class LoginActivity extends Activity {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
             currentUser.reload();
+            updateUI(currentUser);
         }
     }
 
@@ -98,8 +98,7 @@ public class LoginActivity extends Activity {
     }
 
     private void updateUI(FirebaseUser user) {
-        if (user != null)
-        {
+        if (user != null) {
             Toast.makeText(LoginActivity.this, "Signed In!", Toast.LENGTH_SHORT).show();
 
             Intent intent = new Intent(LoginActivity.this, HomeListActivity.class);
