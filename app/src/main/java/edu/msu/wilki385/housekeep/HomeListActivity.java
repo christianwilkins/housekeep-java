@@ -54,9 +54,14 @@ public class HomeListActivity extends AppCompatActivity {
     private void showCreateHouseDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Create New House");
+
         final EditText input = new EditText(this);
+        // Convert 16dp to pixels
+        int paddingPixels = (int) (16 * getResources().getDisplayMetrics().density + 0.5f);
+        input.setPadding(paddingPixels, paddingPixels, paddingPixels, paddingPixels);
         input.setHint("Enter House Name");
         builder.setView(input);
+
         builder.setPositiveButton("Create", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
@@ -76,6 +81,7 @@ public class HomeListActivity extends AppCompatActivity {
         });
         builder.show();
     }
+
 
     private void createHouse(String houseName) {
         if (userId == null) return;
