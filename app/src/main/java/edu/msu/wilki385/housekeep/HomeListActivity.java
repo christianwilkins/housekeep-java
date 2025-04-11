@@ -32,16 +32,11 @@ public class HomeListActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_home_list);
 
-        Button logoutButton = findViewById(R.id.buttonLogout);
-        logoutButton.setOnClickListener(v -> logoutUser());
+        Button settingsButton = findViewById(R.id.buttonSettings);
+        settingsButton.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
 
         Button createHouseButton = findViewById(R.id.buttonCreateHome);
         createHouseButton.setOnClickListener(v -> showCreateHouseDialog());
-
-        Button removeHousesButton = findViewById(R.id.buttonRemoveHomes);
-        removeHousesButton.setOnClickListener(v ->
-                Toast.makeText(this, "Delete using the delete button on each house card", Toast.LENGTH_SHORT).show()
-        );
 
         linearLayoutHomes = findViewById(R.id.linearLayoutHomes);
 
@@ -125,12 +120,5 @@ public class HomeListActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(this, "Failed to get houses: " + e.getMessage(), Toast.LENGTH_SHORT).show());
-    }
-
-    private void logoutUser() {
-        FirebaseAuth.getInstance().signOut();
-        Toast.makeText(this, "Signed Out!", Toast.LENGTH_SHORT).show();
-        startActivity(new Intent(this, LoginActivity.class));
-        finish();
     }
 }
