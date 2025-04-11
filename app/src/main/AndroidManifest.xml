@@ -23,6 +23,9 @@
             </intent-filter>
         </activity>
 
+        <!-- SignUpActivity -->
+        <activity android:name=".SignUpActivity" />
+
         <!-- MainActivity -->
         <activity android:name=".MainActivity" />
     </application>

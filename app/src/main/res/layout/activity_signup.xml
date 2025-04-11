@@ -6,21 +6,32 @@
     android:padding="24dp">
 
     <TextView
-        android:id="@+id/loginTitle"
+        android:id="@+id/signupTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/loginLabel"
+        android:text="@string/signUpLabel"
         android:textSize="24sp"
         android:textStyle="bold"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="40dp" />
 
     <EditText
+        android:id="@+id/nameInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/signupTitle"
+        android:layout_marginTop="40dp"
+        android:hint="@string/name"
+        android:inputType="textPersonName"
+        android:minHeight="48dp"
+        tools:ignore="Autofill,TextContrastCheck" />
+
+    <EditText
         android:id="@+id/emailInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/loginTitle"
-        android:layout_marginTop="40dp"
+        android:layout_below="@id/nameInput"
+        android:layout_marginTop="16dp"
         android:hint="@string/emailHint"
         android:inputType="textEmailAddress"
         android:minHeight="48dp"
@@ -38,25 +49,25 @@
         tools:ignore="Autofill" />
 
     <Button
-        android:id="@+id/loginButton"
+        android:id="@+id/signupButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/passwordInput"
         android:layout_marginTop="24dp"
-        android:text="@string/loginButtonLabel"
+        android:text="@string/signUpLabel"
         tools:ignore="DuplicateSpeakableTextCheck" />
 
     <TextView
-        android:id="@+id/signupLink"
+        android:id="@+id/loginLink"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/loginButton"
+        android:layout_below="@id/signupButton"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="16dp"
         android:clickable="true"
         android:focusable="true"
         android:minHeight="48dp"
-        android:text="@string/signUpRedirect"
+        android:text="@string/loginRedirect"
         android:textColor="@android:color/holo_blue_dark"
         android:textStyle="bold" />
 

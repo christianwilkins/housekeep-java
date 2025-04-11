@@ -5,4 +5,7 @@
     <string name="passwordHint">Password</string>
     <string name="loginButtonLabel">Login</string>
     <string name="signUpRedirect">Don\'t have an account? Sign up</string>
+    <string name="signUpLabel">Sign Up</string>
+    <string name="name">Name</string>
+    <string name="loginRedirect">Already have an account? Login</string>
 </resources>
