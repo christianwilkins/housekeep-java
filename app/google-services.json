@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "625701922197",
+    "project_id": "housekeep-ad529",
+    "storage_bucket": "housekeep-ad529.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:625701922197:android:337656e55f6d8801b4029c",
+        "android_client_info": {
+          "package_name": "edu.msu.wilki385.housekeep"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCoGV8m5ZZe5S284ds6Jkaovt3IeAUHPss"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
