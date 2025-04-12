@@ -121,6 +121,14 @@ public class HomeListActivity extends AppCompatActivity {
                         textView.setText(house.getName());
                         Button deleteButton = card.findViewById(R.id.buttonDeleteHouse);
                         deleteButton.setOnClickListener(v -> removeHouse(house.getId()));
+
+                        Button enterButton = card.findViewById(R.id.buttonEnterHouse);
+                        enterButton.setOnClickListener(v -> {
+                            Intent intent = new Intent(HomeListActivity.this, HomeTaskActivity.class);
+                            intent.putExtra("houseId", house.getId());
+                            startActivity(intent);
+                        });
+
                         linearLayoutHomes.addView(card);
                     }
                 })

@@ -47,6 +47,7 @@ public class HomeTaskActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home_tasks);
+        String houseId = getIntent().getStringExtra("houseId");
 
         areaSpinner = findViewById(R.id.areaSpinner);
         taskList = findViewById(R.id.taskList);
