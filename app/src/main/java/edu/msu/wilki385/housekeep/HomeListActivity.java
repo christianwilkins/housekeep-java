@@ -126,6 +126,7 @@ public class HomeListActivity extends AppCompatActivity {
                         enterButton.setOnClickListener(v -> {
                             Intent intent = new Intent(HomeListActivity.this, HomeTaskActivity.class);
                             intent.putExtra("houseId", house.getId());
+                            intent.putExtra("HOUSE_NAME", house.getName());
                             startActivity(intent);
                         });
 
