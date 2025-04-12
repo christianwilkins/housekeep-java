@@ -34,20 +34,13 @@
             app:tint="#888888" />
     </LinearLayout>
 
-    <!-- Area Dropdown -->
-    <Spinner
-        android:id="@+id/areaSpinner"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/headerLayout"
-        android:layout_marginTop="16dp" />
 
     <!-- Task List -->
     <ListView
         android:id="@+id/taskList"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/areaSpinner"
+        android:layout_below="@id/headerLayout"
         android:layout_marginTop="16dp" />
 
 </RelativeLayout>

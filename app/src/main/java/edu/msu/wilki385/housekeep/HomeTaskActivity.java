@@ -30,87 +30,36 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class HomeTaskActivity extends Activity {
-    private Spinner areaSpinner;
     private ListView taskList;
     private ImageButton plusButton;
-
-    private ArrayList<String> areaList = new ArrayList<>();
-    private ArrayAdapter<String> areaAdapter;
 
     private ArrayList<String> currentTasks = new ArrayList<>();
     private ArrayAdapter<String> taskAdapter;
 
-    private HashMap<String, ArrayList<String>> areaTasks = new HashMap<>();
-
-    @SuppressLint("NonConstantResourceId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home_tasks);
         String houseId = getIntent().getStringExtra("houseId");
 
-        areaSpinner = findViewById(R.id.areaSpinner);
         taskList = findViewById(R.id.taskList);
         plusButton = findViewById(R.id.plusButton);
 
-        // Initial sample category and task
-        areaList.add("Kitchen");
-        areaTasks.put("Kitchen", new ArrayList<>());
-        areaTasks.get("Kitchen").add("Clean refrigerator coils");
+        // Sample task
+        currentTasks.add("Clean refrigerator coils");
 
-        areaAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, areaList);
-        areaAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        areaSpinner.setAdapter(areaAdapter);
-
-        taskAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, currentTasks);
         setupCustomTaskAdapter();
 
-        areaSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                updateTaskList(areaList.get(position));
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
-
         plusButton.setOnClickListener(view -> {
-            PopupMenu popup = new PopupMenu(HomeTaskActivity.this, plusButton);
-            MenuInflater inflater = popup.getMenuInflater();
-            inflater.inflate(R.menu.add_menu, popup.getMenu());
-
-            popup.setOnMenuItemClickListener(item -> {
-                String selectedArea = (String) areaSpinner.getSelectedItem();
-                if (item.getItemId() == R.id.add_category) {
-                    showInputDialog("Add Category", "Enter category name:", name -> {
-                        if (!name.trim().isEmpty() && !areaTasks.containsKey(name)) {
-                            areaList.add(name);
-                            areaTasks.put(name, new ArrayList<>());
-                            areaAdapter.notifyDataSetChanged();
-                            areaSpinner.setSelection(areaList.size() - 1);
-                        }
-                    });
-                    return true;
-                } else if (item.getItemId() == R.id.add_task) {
-                    if (selectedArea != null) {
-                        showInputDialog("Add Task", "Enter task for " + selectedArea + ":", task -> {
-                            if (!task.trim().isEmpty()) {
-                                areaTasks.get(selectedArea).add(task);
-                                updateTaskList(selectedArea);
-                            }
-                        });
-                    }
-                    return true;
-                } else {
-                    return false;
+            showInputDialog("Add Task", "Enter new task:", task -> {
+                if (!task.trim().isEmpty()) {
+                    currentTasks.add(task);
+                    taskAdapter.notifyDataSetChanged();
                 }
             });
-
-            popup.show();
         });
     }
+
     private void setupCustomTaskAdapter() {
         taskAdapter = new ArrayAdapter<String>(this, R.layout.task_item, currentTasks) {
             @NonNull
@@ -145,8 +94,6 @@ public class HomeTaskActivity extends Activity {
 
                 // Row click (go to task details)
                 taskRow.setOnClickListener(v -> {
-                    Toast.makeText(getContext(), "Opening details for: " + taskText.getText(), Toast.LENGTH_SHORT).show();
-                    // You can use an Intent to navigate to a detail view activity here
                     Intent intent = new Intent(getContext(), TaskDetailActivity.class);
                     intent.putExtra("task", taskText.getText().toString());
                     getContext().startActivity(intent);
@@ -159,23 +106,12 @@ public class HomeTaskActivity extends Activity {
         taskList.setAdapter(taskAdapter);
     }
 
-
-    private void updateTaskList(String area) {
-        currentTasks.clear();
-        if (areaTasks.containsKey(area)) {
-            currentTasks.addAll(areaTasks.get(area));
-        }
-        taskAdapter.notifyDataSetChanged();
-    }
-
     private void showInputDialog(String title, String message, OnInputConfirmed callback) {
-        // Inflate the custom layout (dialog_input.xml)
         LayoutInflater inflater = getLayoutInflater();
         View dialogView = inflater.inflate(R.layout.dialog_input, null);
 
         final EditText input = dialogView.findViewById(R.id.editTextInput);
 
-        // Set up the dialog builder
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(title)
                 .setView(dialogView)
@@ -187,8 +123,6 @@ public class HomeTaskActivity extends Activity {
 
         builder.show();
     }
-
-
 
     interface OnInputConfirmed {
         void onConfirmed(String text);
