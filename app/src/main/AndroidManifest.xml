@@ -30,7 +30,6 @@
         <activity android:name=".SignUpActivity" />
         <activity android:name=".MainActivity" />
         <activity android:name=".HomeTaskActivity" />
-        <activity android:name=".TaskDetailActivity" />
     </application>
 
 </manifest>
