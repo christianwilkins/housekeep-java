@@ -1,12 +1,21 @@
 package edu.msu.wilki385.housekeep;
 
 import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.ContentUris;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Paint;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.TextUtils;
@@ -20,6 +29,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -127,6 +137,7 @@ public class HomeTaskActivity extends AppCompatActivity {
         TextView descriptionView = dialogView.findViewById(R.id.taskDetailDescription);
         ImageView imageView = dialogView.findViewById(R.id.taskDetailImage);
         Button takePhotoButton = dialogView.findViewById(R.id.takePhotoButton);
+        Button setReminderButton = dialogView.findViewById(R.id.setReminderButton);
         Button editButton = dialogView.findViewById(R.id.editButton);
         Button deleteButton = dialogView.findViewById(R.id.deleteButton);
         Button closeButton = dialogView.findViewById(R.id.closeButton);
@@ -155,6 +166,14 @@ public class HomeTaskActivity extends AppCompatActivity {
             } else {
                 Toast.makeText(HomeTaskActivity.this, "Task not found", Toast.LENGTH_SHORT).show();
             }
+        });
+
+        setReminderButton.setOnClickListener(v -> {
+            long triggerTime = System.currentTimeMillis() + 10000;
+            scheduleReminder(task, triggerTime);
+            Toast.makeText(HomeTaskActivity.this,
+                    "Reminder set for 10 seconds from now",
+                    Toast.LENGTH_SHORT).show();
         });
 
         editButton.setOnClickListener(v -> {
@@ -343,6 +362,64 @@ public class HomeTaskActivity extends AppCompatActivity {
             } catch (Exception e) {
                 imageView.setImageDrawable(null);
             }
+        }
+    }
+
+    private void scheduleReminder(String taskName, long triggerTimeMillis) {
+        AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+        if (alarmManager == null) {
+            return;
+        }
+
+        Intent intent = new Intent(this, ReminderReceiver.class);
+        intent.putExtra("taskName", taskName);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+            this,
+            taskName.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (alarmManager.canScheduleExactAlarms()) {
+                alarmManager.setExact(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerTimeMillis,
+                    pendingIntent
+                );
+            } else {
+                Toast.makeText(this, "Cannot schedule exact alarm without permission", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    public static class ReminderReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String taskName = intent.getStringExtra("taskName");
+
+            NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+
+            NotificationChannel channel = null;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                channel = new NotificationChannel(
+                    "REMINDER_CHANNEL_ID",
+                    "Reminders",
+                    NotificationManager.IMPORTANCE_DEFAULT
+                );
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                notificationManager.createNotificationChannel(channel);
+            }
+
+            Notification notification = new NotificationCompat.Builder(context, "REMINDER_CHANNEL_ID")
+                .setContentTitle("Housekeep Reminder")
+                .setContentText(taskName)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .build();
+
+            notificationManager.notify(1001, notification);
         }
     }
 
