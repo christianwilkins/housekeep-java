@@ -2,10 +2,12 @@ package edu.msu.wilki385.housekeep;
 
 import android.app.Activity;
 import android.app.AlarmManager;
+import android.app.DatePickerDialog;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.TimePickerDialog;
 import android.content.BroadcastReceiver;
 import android.content.ContentUris;
 import android.content.ContentValues;
@@ -36,6 +38,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.UUID;
 
 import edu.msu.wilki385.housekeep.collections.Task;
@@ -168,13 +171,7 @@ public class HomeTaskActivity extends AppCompatActivity {
             }
         });
 
-        setReminderButton.setOnClickListener(v -> {
-            long triggerTime = System.currentTimeMillis() + 10000;
-            scheduleReminder(task, triggerTime);
-            Toast.makeText(HomeTaskActivity.this,
-                    "Reminder set for 10 seconds from now",
-                    Toast.LENGTH_SHORT).show();
-        });
+        setReminderButton.setOnClickListener(v -> pickDateTime(task));
 
         editButton.setOnClickListener(v -> {
             showInputDialog("Edit Task", "Update task name:", newText -> {
@@ -423,4 +420,40 @@ public class HomeTaskActivity extends AppCompatActivity {
         }
     }
 
+    private void pickDateTime(String task) {
+        final Calendar now = Calendar.getInstance();
+        int year = now.get(Calendar.YEAR);
+        int month = now.get(Calendar.MONTH);
+        int day = now.get(Calendar.DAY_OF_MONTH);
+
+        DatePickerDialog datePicker = new DatePickerDialog(this,
+            (view, year1, month1, day1) -> {
+                now.set(Calendar.YEAR, year1);
+                now.set(Calendar.MONTH, month1);
+                now.set(Calendar.DAY_OF_MONTH, day1);
+
+                int hour = now.get(Calendar.HOUR_OF_DAY);
+                int minute = now.get(Calendar.MINUTE);
+
+                TimePickerDialog timePicker = new TimePickerDialog(this,
+                    (timeView, hour1, minute1) -> {
+                        now.set(Calendar.HOUR_OF_DAY, hour1);
+                        now.set(Calendar.MINUTE, minute1);
+                        now.set(Calendar.SECOND, 0);
+                        now.set(Calendar.MILLISECOND, 0);
+
+                        long triggerTime = now.getTimeInMillis();
+                        scheduleReminder(task, triggerTime);
+                        Toast.makeText(this,
+                            "Reminder set for: " + now.getTime(),
+                            Toast.LENGTH_SHORT).show();
+
+                    }, hour, minute, false);
+
+                timePicker.show();
+
+            }, year, month, day);
+
+        datePicker.show();
+    }
 }
