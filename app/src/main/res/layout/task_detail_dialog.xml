@@ -35,15 +35,20 @@
 
         <LinearLayout
             android:layout_marginTop="16dp"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:gravity="center_horizontal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
             <Button
+                android:id="@+id/takePhotoButton"
+                android:text="Take Photo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <Button
                 android:id="@+id/editButton"
                 android:text="Edit"
-                android:layout_marginEnd="8dp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
 
@@ -51,9 +56,9 @@
                 android:id="@+id/deleteButton"
                 android:text="Delete"
                 android:tint="#FF0000"
-                android:layout_marginEnd="8dp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
+
             <Button
                 android:id="@+id/closeButton"
                 android:text="Close"

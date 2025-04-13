@@ -1,16 +1,25 @@
 package edu.msu.wilki385.housekeep;
 
 import android.app.Activity;
+import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.DialogInterface;
+import android.database.Cursor;
 import android.graphics.Paint;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.*;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -21,7 +30,10 @@ import java.util.UUID;
 
 import edu.msu.wilki385.housekeep.collections.Task;
 
-public class HomeTaskActivity extends Activity {
+public class HomeTaskActivity extends AppCompatActivity {
+
+    private TaskPhotoManager photoManager;
+
     private ListView taskList;
     private Button backButton;
     private ImageButton plusButton;
@@ -39,6 +51,8 @@ public class HomeTaskActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home_tasks);
+
+        photoManager = new TaskPhotoManager();
 
         userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         houseId = getIntent().getStringExtra("houseId");
@@ -112,18 +126,36 @@ public class HomeTaskActivity extends Activity {
         TextView titleView = dialogView.findViewById(R.id.taskDetailTitle);
         TextView descriptionView = dialogView.findViewById(R.id.taskDetailDescription);
         ImageView imageView = dialogView.findViewById(R.id.taskDetailImage);
+        Button takePhotoButton = dialogView.findViewById(R.id.takePhotoButton);
         Button editButton = dialogView.findViewById(R.id.editButton);
         Button deleteButton = dialogView.findViewById(R.id.deleteButton);
         Button closeButton = dialogView.findViewById(R.id.closeButton);
 
         titleView.setText(task);
         descriptionView.setText("This task needs to be completed soon.");
-        imageView.setImageResource(R.drawable.ic_launcher_background);
+
+        int idx1 = currentTasks.indexOf(task);
+        if (idx1 != -1) {
+            String taskId = taskObjects.get(idx1).getId();
+            photoManager.loadTaskPhoto(taskId, imageView);
+        } else {
+            imageView.setImageDrawable(null);
+        }
 
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setView(dialogView)
                 .setCancelable(false)
                 .create();
+
+        takePhotoButton.setOnClickListener(v -> {
+            int idx2 = currentTasks.indexOf(task);
+            if (idx2 != -1) {
+                String taskId = taskObjects.get(idx2).getId();
+                photoManager.captureTaskPhoto(taskId, imageView);
+            } else {
+                Toast.makeText(HomeTaskActivity.this, "Task not found", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         editButton.setOnClickListener(v -> {
             showInputDialog("Edit Task", "Update task name:", newText -> {
@@ -242,4 +274,76 @@ public class HomeTaskActivity extends Activity {
     interface OnInputConfirmed {
         void onConfirmed(String text);
     }
+
+    private class TaskPhotoManager {
+
+        private ActivityResultLauncher<Uri> photoLauncher;
+        private String pendingTaskId;
+        private ImageView pendingImageView;
+
+        public TaskPhotoManager() {
+            photoLauncher = registerForActivityResult(
+                new ActivityResultContracts.TakePicture(),
+                result -> {
+                    if (result) {
+                        Toast.makeText(HomeTaskActivity.this, "Photo captured for task", Toast.LENGTH_SHORT).show();
+                        if (pendingTaskId != null && pendingImageView != null) {
+                            loadTaskPhoto(pendingTaskId, pendingImageView);
+                        }
+                    } else {
+                        Toast.makeText(HomeTaskActivity.this, "Photo capture cancelled", Toast.LENGTH_SHORT).show();
+                    }
+                    pendingTaskId = null;
+                    pendingImageView = null;
+                }
+            );
+        }
+
+        public void captureTaskPhoto(String taskId, ImageView imageView) {
+            pendingTaskId = taskId;
+            pendingImageView = imageView;
+
+            ContentValues values = new ContentValues();
+            String imageTitle = "housekeep" + userId + houseId + taskId;
+            values.put(MediaStore.Images.Media.TITLE, imageTitle);
+            values.put(MediaStore.Images.Media.DISPLAY_NAME, imageTitle);
+            values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+
+            Uri currentPhotoUri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+            if (currentPhotoUri != null) {
+                photoLauncher.launch(currentPhotoUri);
+            } else {
+                Toast.makeText(HomeTaskActivity.this, "Failed to create MediaStore entry for photo", Toast.LENGTH_SHORT).show();
+            }
+        }
+
+        public void loadTaskPhoto(String taskId, ImageView imageView) {
+            String[] projection = {MediaStore.Images.Media._ID, MediaStore.Images.Media.DISPLAY_NAME};
+            String selection = MediaStore.Images.Media.DISPLAY_NAME + " LIKE ?";
+            String[] selectionArgs = {"housekeep" + userId + houseId + taskId + "%"};
+            String sortOrder = MediaStore.Images.Media.DATE_ADDED + " DESC";
+
+            Cursor cursor = getContentResolver().query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                selectionArgs,
+                sortOrder
+            );
+
+            try (cursor) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int idColumn = cursor.getColumnIndex(MediaStore.Images.Media._ID);
+                    long id = cursor.getLong(idColumn);
+                    Uri contentUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
+                    imageView.setImageURI(contentUri);
+                } else {
+                    imageView.setImageDrawable(null);
+                }
+            } catch (Exception e) {
+                imageView.setImageDrawable(null);
+            }
+        }
+    }
+
 }
