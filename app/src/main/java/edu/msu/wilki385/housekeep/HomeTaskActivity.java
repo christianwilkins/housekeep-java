@@ -1,5 +1,6 @@
 package edu.msu.wilki385.housekeep;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.DatePickerDialog;
@@ -14,12 +15,14 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Paint;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -31,7 +34,9 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -64,6 +69,17 @@ public class HomeTaskActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home_tasks);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    new String[] {Manifest.permission.POST_NOTIFICATIONS},
+                    100
+                );
+            }
+        }
 
         photoManager = new TaskPhotoManager();
 
@@ -385,7 +401,12 @@ public class HomeTaskActivity extends AppCompatActivity {
                     pendingIntent
                 );
             } else {
-                Toast.makeText(this, "Cannot schedule exact alarm without permission", Toast.LENGTH_SHORT).show();
+                Intent permIntent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+                startActivity(permIntent);
+                Toast.makeText(this,
+                        "Please enable reminders for this app",
+                        Toast.LENGTH_SHORT
+                ).show();
             }
         }
     }
@@ -446,7 +467,7 @@ public class HomeTaskActivity extends AppCompatActivity {
                         scheduleReminder(task, triggerTime);
                         Toast.makeText(this,
                             "Reminder set for: " + now.getTime(),
-                            Toast.LENGTH_SHORT).show();
+                            Toast.LENGTH_LONG).show();
 
                     }, hour, minute, false);
 
