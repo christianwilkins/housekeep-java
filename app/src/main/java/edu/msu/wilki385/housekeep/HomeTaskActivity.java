@@ -128,25 +128,47 @@ public class HomeTaskActivity extends AppCompatActivity {
                 TextView taskText = convertView.findViewById(R.id.taskText);
                 LinearLayout taskRow = convertView.findViewById(R.id.taskRow);
 
-                String task = currentTasks.get(position);
-                taskText.setText(task.replace(" [Done]", ""));
+                // Instead of getting the task text from currentTasks,
+                // retrieve the corresponding Task object.
+                String taskName = currentTasks.get(position);
+                Task task = taskObjects.get(position);
 
-                boolean isDone = task.contains(" [Done]");
+                taskText.setText(taskName);
+                boolean isDone = task.isDone();  // using the 'done' boolean from our Task object
+
+                // Set the checkbox state and adjust the strike-through styling accordingly.
                 checkBox.setChecked(isDone);
-                taskText.setPaintFlags(isDone
-                        ? taskText.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG
-                        : taskText.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
+                if (isDone) {
+                    taskText.setPaintFlags(taskText.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+                } else {
+                    taskText.setPaintFlags(taskText.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
+                }
 
+                // When the CheckBox is toggled, update the Task object's boolean and optionally update Firestore.
                 checkBox.setOnClickListener(v -> {
-                    if (checkBox.isChecked()) {
-                        currentTasks.set(position, taskText.getText().toString() + " [Done]");
+                    boolean checked = checkBox.isChecked();
+                    // Update the Task object's 'done' field
+                    task.setDone(checked);
+
+                    // Optionally, update this change in Firestore
+                    db.collection("users").document(userId)
+                            .collection("houses").document(houseId)
+                            .collection("tasks").document(task.getId())
+                            .update("done", checked)
+                            .addOnSuccessListener(aVoid -> Toast.makeText(getContext(), "Task status updated", Toast.LENGTH_SHORT).show())
+                            .addOnFailureListener(e ->
+                                    Toast.makeText(getContext(), "Failed to update task: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+
+                    // Update the UI styling immediately
+                    if (checked) {
+                        taskText.setPaintFlags(taskText.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
                     } else {
-                        currentTasks.set(position, taskText.getText().toString());
+                        taskText.setPaintFlags(taskText.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
                     }
                     notifyDataSetChanged();
                 });
 
-                taskRow.setOnClickListener(v -> showTaskDetailDialog(taskText.getText().toString()));
+                taskRow.setOnClickListener(v -> showTaskDetailDialog(taskName));
 
                 return convertView;
             }
@@ -252,7 +274,7 @@ public class HomeTaskActivity extends AppCompatActivity {
 
     private void createTask(String taskName) {
         String taskId = UUID.randomUUID().toString();
-        Task task = new Task(taskId, taskName);
+        Task task = new Task(taskId, taskName, false);
         db.collection("users").document(userId)
                 .collection("houses").document(houseId)
                 .collection("tasks").document(taskId)

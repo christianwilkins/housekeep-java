@@ -6,13 +6,16 @@ public class Task {
     private String description;
     private String photo;  // Could be a URL, file path, or another type
 
+    private boolean done;
+
     // Empty constructor needed by Firestore
     public Task() { }
 
     // Constructor using id and name (description and photo remain null)
-    public Task(String id, String name) {
+    public Task(String id, String name, boolean done) {
         this.id = id;
         this.name = name;
+        this.done = done;
     }
 
     // Getters and Setters
@@ -39,5 +42,13 @@ public class Task {
     }
     public void setPhoto(String photo) {
         this.photo = photo;
+    }
+
+    public boolean isDone() {
+        return done;
+    }
+
+    public void setDone(boolean done) {
+        this.done = done;
     }
 }
