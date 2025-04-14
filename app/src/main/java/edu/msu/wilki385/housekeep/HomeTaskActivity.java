@@ -24,7 +24,10 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.graphics.Paint;
+import android.media.MediaPlayer;
+import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -48,10 +51,17 @@ import androidx.core.content.ContextCompat;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.label.ImageLabel;
+import com.google.mlkit.vision.label.ImageLabeler;
+import com.google.mlkit.vision.label.ImageLabeling;
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions;
+
 
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.UUID;
+import java.io.File;
 
 import edu.msu.wilki385.housekeep.collections.Task;
 
@@ -72,6 +82,13 @@ public class HomeTaskActivity extends AppCompatActivity {
     private String houseId;
     private String houseName;
 
+    // Added fields for audio recording and playback
+    private MediaRecorder mediaRecorder;
+    private String audioFilePath;
+    private boolean isRecording = false;
+    private String pendingAudioTaskId = null;
+    private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -79,11 +96,11 @@ public class HomeTaskActivity extends AppCompatActivity {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(
-                    this,
-                    new String[] {Manifest.permission.POST_NOTIFICATIONS},
-                    100
+                        this,
+                        new String[] {Manifest.permission.POST_NOTIFICATIONS},
+                        100
                 );
             }
         }
@@ -134,9 +151,9 @@ public class HomeTaskActivity extends AppCompatActivity {
                 Task task = taskObjects.get(position);
 
                 taskText.setText(taskName);
-                boolean isDone = task.isDone();  // using the 'done' boolean from our Task object
+                boolean isDone = task.isDone();
 
-                // Set the checkbox state and adjust the strike-through styling accordingly.
+                // Update checkbox state and styling accordingly.
                 checkBox.setChecked(isDone);
                 if (isDone) {
                     taskText.setPaintFlags(taskText.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
@@ -144,13 +161,11 @@ public class HomeTaskActivity extends AppCompatActivity {
                     taskText.setPaintFlags(taskText.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
                 }
 
-                // When the CheckBox is toggled, update the Task object's boolean and optionally update Firestore.
+                // Update task's done status on checkbox toggle.
                 checkBox.setOnClickListener(v -> {
                     boolean checked = checkBox.isChecked();
-                    // Update the Task object's 'done' field
                     task.setDone(checked);
 
-                    // Optionally, update this change in Firestore
                     db.collection("users").document(userId)
                             .collection("houses").document(houseId)
                             .collection("tasks").document(task.getId())
@@ -159,7 +174,6 @@ public class HomeTaskActivity extends AppCompatActivity {
                             .addOnFailureListener(e ->
                                     Toast.makeText(getContext(), "Failed to update task: " + e.getMessage(), Toast.LENGTH_SHORT).show());
 
-                    // Update the UI styling immediately
                     if (checked) {
                         taskText.setPaintFlags(taskText.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
                     } else {
@@ -168,6 +182,7 @@ public class HomeTaskActivity extends AppCompatActivity {
                     notifyDataSetChanged();
                 });
 
+                // When a task row is clicked, show its detail dialog.
                 taskRow.setOnClickListener(v -> showTaskDetailDialog(taskName));
 
                 return convertView;
@@ -189,6 +204,8 @@ public class HomeTaskActivity extends AppCompatActivity {
         Button editButton = dialogView.findViewById(R.id.editButton);
         Button deleteButton = dialogView.findViewById(R.id.deleteButton);
         Button closeButton = dialogView.findViewById(R.id.closeButton);
+        // New single button for audio note
+        Button audioNoteButton = dialogView.findViewById(R.id.audioNoteButton);
 
         titleView.setText(task);
         descriptionView.setText("This task needs to be completed soon.");
@@ -241,6 +258,17 @@ public class HomeTaskActivity extends AppCompatActivity {
         });
 
         closeButton.setOnClickListener(v -> dialog.dismiss());
+
+        // When the Audio Note button is tapped, open the audio note modal.
+        audioNoteButton.setOnClickListener(v -> {
+            int idx = currentTasks.indexOf(task);
+            if (idx != -1) {
+                String taskId = taskObjects.get(idx).getId();
+                showAudioNoteDialog(taskId);
+            } else {
+                Toast.makeText(HomeTaskActivity.this, "Task not found", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         dialog.show();
     }
@@ -332,10 +360,187 @@ public class HomeTaskActivity extends AppCompatActivity {
                         Toast.makeText(this, "Failed to get tasks: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 100) {
+            // Handle POST_NOTIFICATIONS permission if needed.
+        } else if (requestCode == REQUEST_RECORD_AUDIO_PERMISSION) {
+            if (grantResults.length > 0 &&
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (pendingAudioTaskId != null) {
+                    startRecordingAudio(pendingAudioTaskId);
+                    pendingAudioTaskId = null;
+                }
+            } else {
+                Toast.makeText(this, "Microphone permission denied", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    // Helper interface for input dialogs
     interface OnInputConfirmed {
         void onConfirmed(String text);
     }
 
+    ////////////////////// Audio Note Modal Dialog //////////////////////
+
+    /**
+     * Opens a modal dialog that allows the user to record, stop, and play an audio note.
+     */
+    private void showAudioNoteDialog(String taskId) {
+        LayoutInflater inflater = getLayoutInflater();
+        View audioDialogView = inflater.inflate(R.layout.dialog_audio_note, null);
+
+        TextView audioStatusText = audioDialogView.findViewById(R.id.audioStatusText);
+        Button toggleRecordButton = audioDialogView.findViewById(R.id.toggleRecordButton);
+        Button playRecordingButton = audioDialogView.findViewById(R.id.playRecordingButton);
+        Button closeAudioDialogButton = audioDialogView.findViewById(R.id.closeAudioDialogButton);
+
+        // Build the file name and complete path.
+        String fileName = "housekeep_audio_" + userId + "_" + houseId + "_" + taskId + ".3gp";
+        String filePath = getExternalCacheDir().getAbsolutePath() + "/" + fileName;
+        File audioFile = new File(filePath);
+
+        // Check if a recording file already exists
+        if (audioFile.exists()) {
+            audioStatusText.setText("Audio recording exists.");
+            playRecordingButton.setEnabled(true);
+            // Set the global variable so that playAudio() can use it.
+            audioFilePath = filePath;
+        } else {
+            audioStatusText.setText("No recording yet.");
+            playRecordingButton.setEnabled(false);
+        }
+
+        AlertDialog audioDialog = new AlertDialog.Builder(this)
+                .setView(audioDialogView)
+                .create();
+
+        toggleRecordButton.setOnClickListener(v -> {
+            if (!isRecording) {
+                // Start recording if permission is granted.
+                if (checkAndRequestAudioPermission()) {
+                    // Start recording for this task.
+                    startRecordingAudio(taskId);
+                    toggleRecordButton.setText("Stop Recording");
+                    audioStatusText.setText("Recording in progress...");
+                } else {
+                    pendingAudioTaskId = taskId;
+                }
+            } else {
+                // Stop the recording.
+                stopRecordingAudio();
+                toggleRecordButton.setText("Record");
+                audioStatusText.setText("Recording saved:\n" + audioFilePath);
+                playRecordingButton.setEnabled(true);
+            }
+        });
+
+        playRecordingButton.setOnClickListener(v -> {
+            if (audioFilePath != null) {
+                playAudio(audioFilePath);
+            } else {
+                Toast.makeText(this, "No recording available", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        closeAudioDialogButton.setOnClickListener(v -> {
+            if (isRecording) {
+                stopRecordingAudio();
+            }
+            audioDialog.dismiss();
+        });
+
+        audioDialog.show();
+    }
+
+    ////////////////////// Audio Recording and Playback Methods //////////////////////
+
+    /**
+     * Checks if RECORD_AUDIO permission is granted. If not, requests it.
+     */
+    private boolean checkAndRequestAudioPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{Manifest.permission.RECORD_AUDIO},
+                    REQUEST_RECORD_AUDIO_PERMISSION
+            );
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Starts audio recording for the given task.
+     */
+    private void startRecordingAudio(String taskId) {
+        // Create a unique filename and store in external cache.
+        String fileName = "housekeep_audio_" + userId + "_" + houseId + "_" + taskId + ".3gp";
+        audioFilePath = getExternalCacheDir().getAbsolutePath() + "/" + fileName;
+
+        mediaRecorder = new MediaRecorder();
+        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+        mediaRecorder.setOutputFile(audioFilePath);
+        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+
+        try {
+            mediaRecorder.prepare();
+            mediaRecorder.start();
+            isRecording = true;
+            Toast.makeText(this, "Recording started...", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Failed to start recording: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Stops the audio recording if active.
+     */
+    private void stopRecordingAudio() {
+        if (mediaRecorder != null && isRecording) {
+            try {
+                mediaRecorder.stop();
+                mediaRecorder.release();
+                mediaRecorder = null;
+                isRecording = false;
+                Toast.makeText(this, "Recording saved:\n" + audioFilePath, Toast.LENGTH_SHORT).show();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Plays the audio from the specified file path.
+     */
+    private void playAudio(String audioPath) {
+        MediaPlayer mediaPlayer = new MediaPlayer();
+        try {
+            mediaPlayer.setDataSource(audioPath);
+            mediaPlayer.prepare();
+            mediaPlayer.start();
+            Toast.makeText(this, "Playing audio...", Toast.LENGTH_SHORT).show();
+
+            mediaPlayer.setOnCompletionListener(mp -> {
+                mp.release();
+                Toast.makeText(this, "Playback complete", Toast.LENGTH_SHORT).show();
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Failed to play audio: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    ////////////////////// End of Audio Methods //////////////////////
+
+    ////////////////////// TaskPhotoManager (unchanged) //////////////////////
     private class TaskPhotoManager {
 
         private ActivityResultLauncher<Uri> photoLauncher;
@@ -343,27 +548,25 @@ public class HomeTaskActivity extends AppCompatActivity {
         private ImageView pendingImageView;
         private TextView pendingDescriptionView;
 
-        // ref: https://developer.android.com/training/basics/intents/result#java
         public TaskPhotoManager() {
             photoLauncher = registerForActivityResult(
-                new ActivityResultContracts.TakePicture(),
-                result -> {
-                    if (result) {
-                        Toast.makeText(HomeTaskActivity.this, "Photo captured for task", Toast.LENGTH_SHORT).show();
-                        if (pendingTaskId != null && pendingImageView != null) {
-                            loadTaskPhoto(pendingTaskId, pendingImageView, pendingDescriptionView);
+                    new ActivityResultContracts.TakePicture(),
+                    result -> {
+                        if (result) {
+                            Toast.makeText(HomeTaskActivity.this, "Photo captured for task", Toast.LENGTH_SHORT).show();
+                            if (pendingTaskId != null && pendingImageView != null) {
+                                loadTaskPhoto(pendingTaskId, pendingImageView, pendingDescriptionView);
+                            }
+                        } else {
+                            Toast.makeText(HomeTaskActivity.this, "Photo capture cancelled", Toast.LENGTH_SHORT).show();
                         }
-                    } else {
-                        Toast.makeText(HomeTaskActivity.this, "Photo capture cancelled", Toast.LENGTH_SHORT).show();
+                        pendingTaskId = null;
+                        pendingImageView = null;
+                        pendingDescriptionView = null;
                     }
-                    pendingTaskId = null;
-                    pendingImageView = null;
-                    pendingDescriptionView = null;
-                }
             );
         }
 
-        // ref: https://developer.android.com/training/data-storage/shared/media#java
         public void captureTaskPhoto(String taskId, ImageView imageView, TextView descriptionView) {
             pendingTaskId = taskId;
             pendingImageView = imageView;
@@ -390,11 +593,11 @@ public class HomeTaskActivity extends AppCompatActivity {
             String sortOrder = MediaStore.Images.Media.DATE_ADDED + " DESC";
 
             Cursor cursor = getContentResolver().query(
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                projection,
-                selection,
-                selectionArgs,
-                sortOrder
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    projection,
+                    selection,
+                    selectionArgs,
+                    sortOrder
             );
 
             try (cursor) {
@@ -404,32 +607,28 @@ public class HomeTaskActivity extends AppCompatActivity {
                     Uri contentUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
                     imageView.setImageURI(contentUri);
 
-                    // ref: https://developers.google.com/ml-kit/vision/image-labeling/android#java
                     try {
                         Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), contentUri);
                         InputImage inputImage = InputImage.fromBitmap(bitmap, 0);
                         ImageLabeler labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS);
                         labeler.process(inputImage)
-                            .addOnSuccessListener(labels -> {
-                                ImageLabel bestLabel = null;
-                                for (ImageLabel label : labels) {
-                                    if (bestLabel == null || label.getConfidence() > bestLabel.getConfidence()) {
-                                        bestLabel = label;
+                                .addOnSuccessListener(labels -> {
+                                    ImageLabel bestLabel = null;
+                                    for (ImageLabel label : labels) {
+                                        if (bestLabel == null || label.getConfidence() > bestLabel.getConfidence()) {
+                                            bestLabel = label;
+                                        }
                                     }
-                                }
-                                if (bestLabel != null) {
-                                    descriptionView.setText(bestLabel.getText() + " (" + String.format("%.2f", bestLabel.getConfidence()) + ")");
-                                } else {
-                                    descriptionView.setText("No objects detected");
-                                }
-                            })
-                            .addOnFailureListener(e -> {
-                                descriptionView.setText("ML Kit error");
-                            });
+                                    if (bestLabel != null) {
+                                        descriptionView.setText(bestLabel.getText() + " (" + String.format("%.2f", bestLabel.getConfidence()) + ")");
+                                    } else {
+                                        descriptionView.setText("No objects detected");
+                                    }
+                                })
+                                .addOnFailureListener(e -> descriptionView.setText("ML Kit error"));
                     } catch (Exception e) {
                         descriptionView.setText("Error processing image");
                     }
-
                 } else {
                     imageView.setImageDrawable(null);
                 }
@@ -439,7 +638,7 @@ public class HomeTaskActivity extends AppCompatActivity {
         }
     }
 
-    // ref: https://developer.android.com/reference/android/app/AlarmManager
+    ////////////////////// Reminder Methods (unchanged) //////////////////////
     private void scheduleReminder(String taskName, long triggerTimeMillis) {
         AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
         if (alarmManager == null) {
@@ -449,18 +648,18 @@ public class HomeTaskActivity extends AppCompatActivity {
         Intent intent = new Intent(this, ReminderReceiver.class);
         intent.putExtra("taskName", taskName);
         PendingIntent pendingIntent = PendingIntent.getBroadcast(
-            this,
-            taskName.hashCode(),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                this,
+                taskName.hashCode(),
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (alarmManager.canScheduleExactAlarms()) {
                 alarmManager.setExact(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerTimeMillis,
-                    pendingIntent
+                        AlarmManager.RTC_WAKEUP,
+                        triggerTimeMillis,
+                        pendingIntent
                 );
             } else {
                 Intent permIntent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
@@ -473,7 +672,6 @@ public class HomeTaskActivity extends AppCompatActivity {
         }
     }
 
-    // ref: https://developer.android.com/develop/ui/views/notifications/channels#java
     public static class ReminderReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -484,9 +682,9 @@ public class HomeTaskActivity extends AppCompatActivity {
             NotificationChannel channel = null;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 channel = new NotificationChannel(
-                    "REMINDER_CHANNEL_ID",
-                    "Reminders",
-                    NotificationManager.IMPORTANCE_DEFAULT
+                        "REMINDER_CHANNEL_ID",
+                        "Reminders",
+                        NotificationManager.IMPORTANCE_DEFAULT
                 );
             }
 
@@ -495,16 +693,15 @@ public class HomeTaskActivity extends AppCompatActivity {
             }
 
             Notification notification = new NotificationCompat.Builder(context, "REMINDER_CHANNEL_ID")
-                .setContentTitle("Housekeep Reminder")
-                .setContentText(taskName)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .build();
+                    .setContentTitle("Housekeep Reminder")
+                    .setContentText(taskName)
+                    .setSmallIcon(android.R.drawable.ic_dialog_info)
+                    .build();
 
             notificationManager.notify(1001, notification);
         }
     }
 
-    // ref: https://developer.android.com/develop/ui/views/components/pickers#java
     private void pickDateTime(String task) {
         final Calendar now = Calendar.getInstance();
         int year = now.get(Calendar.YEAR);
@@ -512,32 +709,32 @@ public class HomeTaskActivity extends AppCompatActivity {
         int day = now.get(Calendar.DAY_OF_MONTH);
 
         DatePickerDialog datePicker = new DatePickerDialog(this,
-            (view, year1, month1, day1) -> {
-                now.set(Calendar.YEAR, year1);
-                now.set(Calendar.MONTH, month1);
-                now.set(Calendar.DAY_OF_MONTH, day1);
+                (view, year1, month1, day1) -> {
+                    now.set(Calendar.YEAR, year1);
+                    now.set(Calendar.MONTH, month1);
+                    now.set(Calendar.DAY_OF_MONTH, day1);
 
-                int hour = now.get(Calendar.HOUR_OF_DAY);
-                int minute = now.get(Calendar.MINUTE);
+                    int hour = now.get(Calendar.HOUR_OF_DAY);
+                    int minute = now.get(Calendar.MINUTE);
 
-                TimePickerDialog timePicker = new TimePickerDialog(this,
-                    (timeView, hour1, minute1) -> {
-                        now.set(Calendar.HOUR_OF_DAY, hour1);
-                        now.set(Calendar.MINUTE, minute1);
-                        now.set(Calendar.SECOND, 0);
-                        now.set(Calendar.MILLISECOND, 0);
+                    TimePickerDialog timePicker = new TimePickerDialog(this,
+                            (timeView, hour1, minute1) -> {
+                                now.set(Calendar.HOUR_OF_DAY, hour1);
+                                now.set(Calendar.MINUTE, minute1);
+                                now.set(Calendar.SECOND, 0);
+                                now.set(Calendar.MILLISECOND, 0);
 
-                        long triggerTime = now.getTimeInMillis();
-                        scheduleReminder(task, triggerTime);
-                        Toast.makeText(this,
-                            "Reminder set for: " + now.getTime(),
-                            Toast.LENGTH_LONG).show();
+                                long triggerTime = now.getTimeInMillis();
+                                scheduleReminder(task, triggerTime);
+                                Toast.makeText(this,
+                                        "Reminder set for: " + now.getTime(),
+                                        Toast.LENGTH_LONG).show();
 
-                    }, hour, minute, false);
+                            }, hour, minute, false);
 
-                timePicker.show();
+                    timePicker.show();
 
-            }, year, month, day);
+                }, year, month, day);
 
         datePicker.show();
     }
