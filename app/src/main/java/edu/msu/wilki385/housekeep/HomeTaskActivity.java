@@ -343,6 +343,7 @@ public class HomeTaskActivity extends AppCompatActivity {
         private ImageView pendingImageView;
         private TextView pendingDescriptionView;
 
+        // ref: https://developer.android.com/training/basics/intents/result#java
         public TaskPhotoManager() {
             photoLauncher = registerForActivityResult(
                 new ActivityResultContracts.TakePicture(),
@@ -362,6 +363,7 @@ public class HomeTaskActivity extends AppCompatActivity {
             );
         }
 
+        // ref: https://developer.android.com/training/data-storage/shared/media#java
         public void captureTaskPhoto(String taskId, ImageView imageView, TextView descriptionView) {
             pendingTaskId = taskId;
             pendingImageView = imageView;
@@ -402,6 +404,7 @@ public class HomeTaskActivity extends AppCompatActivity {
                     Uri contentUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
                     imageView.setImageURI(contentUri);
 
+                    // ref: https://developers.google.com/ml-kit/vision/image-labeling/android#java
                     try {
                         Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), contentUri);
                         InputImage inputImage = InputImage.fromBitmap(bitmap, 0);
@@ -436,6 +439,7 @@ public class HomeTaskActivity extends AppCompatActivity {
         }
     }
 
+    // ref: https://developer.android.com/reference/android/app/AlarmManager
     private void scheduleReminder(String taskName, long triggerTimeMillis) {
         AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
         if (alarmManager == null) {
@@ -469,6 +473,7 @@ public class HomeTaskActivity extends AppCompatActivity {
         }
     }
 
+    // ref: https://developer.android.com/develop/ui/views/notifications/channels#java
     public static class ReminderReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -499,6 +504,7 @@ public class HomeTaskActivity extends AppCompatActivity {
         }
     }
 
+    // ref: https://developer.android.com/develop/ui/views/components/pickers#java
     private void pickDateTime(String task) {
         final Calendar now = Calendar.getInstance();
         int year = now.get(Calendar.YEAR);
