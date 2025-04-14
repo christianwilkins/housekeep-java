@@ -29,9 +29,10 @@
             android:id="@+id/taskDetailImage"
             android:layout_marginTop="12dp"
             android:layout_width="match_parent"
-            android:layout_height="200dp"
+            android:layout_height="300dp"
             android:scaleType="centerCrop"
-            android:src="@drawable/ic_launcher_background" />
+            android:background="@drawable/ic_launcher_background"
+            android:src="@null" />
 
         <LinearLayout
             android:layout_marginTop="16dp"
