@@ -1,5 +1,12 @@
 package edu.msu.wilki385.housekeep;
 
+import android.graphics.Bitmap;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.label.ImageLabel;
+import com.google.mlkit.vision.label.ImageLabeler;
+import com.google.mlkit.vision.label.ImageLabeling;
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions;
+
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlarmManager;
@@ -167,7 +174,7 @@ public class HomeTaskActivity extends AppCompatActivity {
         int idx1 = currentTasks.indexOf(task);
         if (idx1 != -1) {
             String taskId = taskObjects.get(idx1).getId();
-            photoManager.loadTaskPhoto(taskId, imageView);
+            photoManager.loadTaskPhoto(taskId, imageView, descriptionView);
         } else {
             imageView.setImageDrawable(null);
         }
@@ -181,7 +188,7 @@ public class HomeTaskActivity extends AppCompatActivity {
             int idx2 = currentTasks.indexOf(task);
             if (idx2 != -1) {
                 String taskId = taskObjects.get(idx2).getId();
-                photoManager.captureTaskPhoto(taskId, imageView);
+                photoManager.captureTaskPhoto(taskId, imageView, descriptionView);
             } else {
                 Toast.makeText(HomeTaskActivity.this, "Task not found", Toast.LENGTH_SHORT).show();
             }
@@ -312,6 +319,7 @@ public class HomeTaskActivity extends AppCompatActivity {
         private ActivityResultLauncher<Uri> photoLauncher;
         private String pendingTaskId;
         private ImageView pendingImageView;
+        private TextView pendingDescriptionView;
 
         public TaskPhotoManager() {
             photoLauncher = registerForActivityResult(
@@ -320,20 +328,22 @@ public class HomeTaskActivity extends AppCompatActivity {
                     if (result) {
                         Toast.makeText(HomeTaskActivity.this, "Photo captured for task", Toast.LENGTH_SHORT).show();
                         if (pendingTaskId != null && pendingImageView != null) {
-                            loadTaskPhoto(pendingTaskId, pendingImageView);
+                            loadTaskPhoto(pendingTaskId, pendingImageView, pendingDescriptionView);
                         }
                     } else {
                         Toast.makeText(HomeTaskActivity.this, "Photo capture cancelled", Toast.LENGTH_SHORT).show();
                     }
                     pendingTaskId = null;
                     pendingImageView = null;
+                    pendingDescriptionView = null;
                 }
             );
         }
 
-        public void captureTaskPhoto(String taskId, ImageView imageView) {
+        public void captureTaskPhoto(String taskId, ImageView imageView, TextView descriptionView) {
             pendingTaskId = taskId;
             pendingImageView = imageView;
+            pendingDescriptionView = descriptionView;
 
             ContentValues values = new ContentValues();
             String imageTitle = "housekeep" + userId + houseId + taskId;
@@ -349,7 +359,7 @@ public class HomeTaskActivity extends AppCompatActivity {
             }
         }
 
-        public void loadTaskPhoto(String taskId, ImageView imageView) {
+        public void loadTaskPhoto(String taskId, ImageView imageView, TextView descriptionView) {
             String[] projection = {MediaStore.Images.Media._ID, MediaStore.Images.Media.DISPLAY_NAME};
             String selection = MediaStore.Images.Media.DISPLAY_NAME + " LIKE ?";
             String[] selectionArgs = {"housekeep" + userId + houseId + taskId + "%"};
@@ -369,6 +379,32 @@ public class HomeTaskActivity extends AppCompatActivity {
                     long id = cursor.getLong(idColumn);
                     Uri contentUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
                     imageView.setImageURI(contentUri);
+
+                    try {
+                        Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), contentUri);
+                        InputImage inputImage = InputImage.fromBitmap(bitmap, 0);
+                        ImageLabeler labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS);
+                        labeler.process(inputImage)
+                            .addOnSuccessListener(labels -> {
+                                ImageLabel bestLabel = null;
+                                for (ImageLabel label : labels) {
+                                    if (bestLabel == null || label.getConfidence() > bestLabel.getConfidence()) {
+                                        bestLabel = label;
+                                    }
+                                }
+                                if (bestLabel != null) {
+                                    descriptionView.setText(bestLabel.getText() + " (" + String.format("%.2f", bestLabel.getConfidence()) + ")");
+                                } else {
+                                    descriptionView.setText("No objects detected");
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                descriptionView.setText("ML Kit error");
+                            });
+                    } catch (Exception e) {
+                        descriptionView.setText("Error processing image");
+                    }
+
                 } else {
                     imageView.setImageDrawable(null);
                 }
